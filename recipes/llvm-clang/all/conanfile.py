@@ -2,6 +2,7 @@ import json
 import os
 import re
 import textwrap
+from collections import defaultdict
 from pathlib import PurePosixPath
 
 from conan import ConanFile
@@ -13,10 +14,10 @@ from conan.tools.files import (
     copy,
     export_conandata_patches,
     get,
+    load,
     rm,
     rmdir,
     save,
-    load,
 )
 from conan.tools.scm import Version
 
@@ -68,26 +69,18 @@ def components_from_dotfile(dotfile):
                     yield node_label, labels[match_dep.group(2)]
         # some components don't have dependencies
         for label in labels.values():
-            if label.startswith("clang"):
+            if label.startswith("clang") and not label.startswith("clang-"):
                 yield label, None
 
     system_libs = {
         "dl",
         "version",
     }
-    components = {}
+    components = defaultdict(lambda: {"system_libs": [], "requires": []})
     dotfile_rows = dotfile.split("\n")
     for node, dependency in node_dependencies(dotfile_rows):
-        key = "system_libs" if dependency in system_libs else "requires"
-        if node not in components:
-            components[node] = {"system_libs": [], "requires": []}
-            if dependency is not None:
-                components[node][key] = [
-                    f"llvm-core::{dependency}"
-                    if dependency.startswith("LLVM")
-                    else dependency
-                ]
-        elif dependency is not None:
+        if dependency is not None:
+            key = "system_libs" if dependency in system_libs else "requires"
             components[node][key].append(
                 f"llvm-core::{dependency}"
                 if dependency.startswith("LLVM")
@@ -134,7 +127,7 @@ class LLVMClangConan(ConanFile):
             self.options.rm_safe("fPIC")
 
     def requirements(self):
-        self.requires(f"llvm-core/{self.version}")
+        self.requires(f"llvm-core/{self.version}", transitive_headers=True)
         if self.options.with_xml2:
             self.requires("libxml2/[>=2.12.5 <3]")
 
