@@ -1,0 +1,38 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 24e656eced6d..5ec0e141e3d0 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -37,8 +37,8 @@ if(CLANG_BUILT_STANDALONE)
+     mark_as_advanced(LLVM_ENABLE_ASSERTIONS)
+   endif()
+ 
+-  find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+-  list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
++  find_package(LLVM REQUIRED CONFIG)
++  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+ 
+   # Turn into CACHE PATHs for overwritting
+   set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
+@@ -68,6 +68,22 @@ if(CLANG_BUILT_STANDALONE)
+   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
+   option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
+ 
++  # By creating the following targets here, subprojects that depend on
++  # LLVM's tablegen-generated headers can always depend on this target
++  # whether building in-tree with LLVM or not.
++  if(NOT TARGET vt_gen)
++    add_custom_target(vt_gen)
++  endif()
++  if(NOT TARGET ARMTargetParserTableGen)
++    add_custom_target(ARMTargetParserTableGen)
++  endif()
++  if(NOT TARGET AArch64TargetParserTableGen)
++    add_custom_target(AArch64TargetParserTableGen)
++  endif()
++  if(NOT TARGET RISCVTargetParserTableGen)
++    add_custom_target(RISCVTargetParserTableGen)
++  endif()
++
+   include(AddLLVM)
+   include(TableGen)
+   include(HandleLLVMOptions)
